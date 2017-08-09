@@ -9,6 +9,10 @@ import org.apache.spark
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.types._
+import org.apache.log4j._
+import java.util.Calendar
+import java.text.SimpleDateFormat
+
 
 object MobilityModel {
   def main(args: Array[String]) {
@@ -17,11 +21,14 @@ object MobilityModel {
     val hdfs_port = 9000
     val sqlContext = new SQLContext(new SparkContext(new SparkConf().setAppName("MobilityModel Application")
       .setMaster("spark://" + spark_host + ":7077")))
-
+    val log = LogManager.getRootLogger
+    log.setLevel(Level.INFO)
     // Read MOH to cellId mapping. Headers[cellid, TowerIndex]
     val cellIndexTowerIndexSchema = StructType(Array(
       StructField("lat", StringType, nullable = true),
       StructField("lon", StringType, nullable = true)))
+
+    log.info("Starting the calculations")
 
     val cellIndexTowerIndexDf = sqlContext.read
       .format("com.databricks.spark.csv")
@@ -169,9 +176,10 @@ object MobilityModel {
     //   .write.format("com.databricks.spark.csv") 
     //   .save("hdfs://" + host + ":" + hdfs_port + "/user/hadoop/lf_job5")
     //--- Calculate Mobility end---//
-
+    val formatter = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss")
+    val current = formatter.format(Calendar.getInstance().getTime())
     sqlContext.sql("""select count(*) from cellIndexTowerIndexView""")
     .write.format("com.databricks.spark.csv")
-    .save("hdfs://" + host + ":" + hdfs_port + "/user/output/file")
+    .save("hdfs://" + host + ":" + hdfs_port + "/user/output/"+current)
   }
 }
