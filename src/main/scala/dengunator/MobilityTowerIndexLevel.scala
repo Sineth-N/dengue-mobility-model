@@ -28,14 +28,44 @@ object MobilityModel {
       StructField("lat", StringType, nullable = true),
       StructField("lon", StringType, nullable = true)))
 
-    log.info("Starting the calculations")
-
+    /*
+    load the celltowerindex
+     */
     val cellIndexTowerIndexDf = sqlContext.read
       .format("com.databricks.spark.csv")
       .option("header", "true") // Use first line of all files as header
       .schema(cellIndexTowerIndexSchema)
       .load("hdfs://" + host + ":" + hdfs_port + "/user/sparkdata/tower_locations_minified.csv").cache()
     cellIndexTowerIndexDf.registerTempTable("cellIndexTowerIndexView")
+
+    val cdrSchema = StructType(Array(
+     StructField("C0", StringType, nullable = true),
+     StructField("DEVICE_NAME", StringType, nullable = true),
+     StructField("C2", StringType, nullable = true),
+     StructField("C3", StringType, nullable = true),
+     StructField("C4", StringType, nullable = true),
+     StructField("C5", StringType, nullable = true),
+     StructField("DURATION", StringType, nullable = true)))
+
+   // Read CDR data
+    val cdrDf = sqlContext.read
+     .format("com.databricks.spark.csv")
+     .option("header", "false") // Use first line of all files as header
+     .option("delimiter", "|")
+     .schema(cdrSchema)
+     .load("hdfs://" + host + ":" + hdfs_port + "/user/sparkdata/voice_sample_20130501_20130514_size_0.01.csv")
+    cdrDf.registerTempTable("cdrView")
+
+    /* Select only necessary columns from CDR. Headers[CALL_DIRECTION_KEY, ANUMBER, OTHER_NUMBER, cellid, CALL_DATE,
+    //      * CALL_Time]
+    //      * CALL_DATE, CALL_Time is taken from CALL_TIME colum(YYYY-MM-DD:HH:MM:SS) in CDR*/
+     val reducedColumnCdrDf = sqlContext.sql("""Select C0 AS CALL_DIRECTION_KEY, C2 AS ANUMBER,
+       C3 AS OTHER_NUMBER, C4 AS CELL_ID, SUBSTRING(C5,5,4) AS CALL_DATE, SUBSTRING(C5,9,4) AS CALL_TIME
+       FROM cdrView""")
+     reducedColumnCdrDf.registerTempTable("reducedColumnCdrView")
+
+
+    //    log.warn(sqlContext.sql("""select count(*) from cdrView"""))
 
     // Read date to week number mapping. Headers[CALL_DATE, WeekNumber]
     // val dateWeekMapSchema = StructType(Array(
@@ -176,10 +206,16 @@ object MobilityModel {
     //   .write.format("com.databricks.spark.csv") 
     //   .save("hdfs://" + host + ":" + hdfs_port + "/user/hadoop/lf_job5")
     //--- Calculate Mobility end---//
+//    log.warn("NUMBER OF CASES "+sqlContext.sql("""select count(*) from cdrview"""))
     val formatter = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss")
-    val current = formatter.format(Calendar.getInstance().getTime())
-    sqlContext.sql("""select count(*) from cellIndexTowerIndexView""")
+    val current = formatter.format(Calendar.getInstance().getTime)
+    sqlContext.sql("""select CELL_ID,count(*) from reducedColumnCdrView group by CELL_ID""")
     .write.format("com.databricks.spark.csv")
     .save("hdfs://" + host + ":" + hdfs_port + "/user/output/"+current)
+
+    log.info("####################Ending the calculations#########################")
+    log.info("####################Ending the calculations#########################")
+    log.info("####################Ending the calculations#########################")
+    log.info("Fields available are "+reducedColumnCdrDf.schema.toString())
   }
 }
