@@ -1,221 +1,194 @@
 package dengunator
 
 /* MobilityModel.scala */
+
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
 import org.apache.spark.SparkConf
 import com.databricks.spark.avro._
 import org.apache.spark
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.SQLContext
+import org.apache.spark.sql.{Row, SQLContext, SparkSession}
 import org.apache.spark.sql.types._
 import org.apache.log4j._
 import java.util.Calendar
 import java.text.SimpleDateFormat
 
+import org.apache.spark.rdd.RDD
+
 
 object MobilityModel {
   def main(args: Array[String]) {
+//    val spark_host = "sineth-HP-ProBook-450-G1"
+//    val host = "localhost"
+//    val hdfs_port = 9000
+//    val sqlContext = new SQLContext(new SparkContext(new SparkConf().setAppName("Spark Mobility Model 12")
+//      .setMaster("spark://" + spark_host + ":7077")))
+//    val log = LogManager.getRootLogger
+//    Logger.getLogger("org").setLevel(Level.OFF)
+//    Logger.getLogger("akka").setLevel(Level.OFF)
+//    log.setLevel(Level.INFO)
+//    // Read MOH to cellId mapping. Headers[cellid, TowerIndex]
+//    val cellIndexTowerIndexSchema = StructType(Array(
+//      StructField("lat", StringType, nullable = true),
+//      StructField("lon", StringType, nullable = true)))
+//
+//    /*
+//    load the celltowerindex
+//     */
+//    val cellIndexTowerIndexDf = sqlContext.read
+//      .format("com.databricks.spark.csv")
+//      .option("header", "true") // Use first line of all files as header
+//      .schema(cellIndexTowerIndexSchema)
+//      .load("hdfs://" + host + ":" + hdfs_port + "/user/sparkdata/tower_locations_minified.csv").cache()
+//    cellIndexTowerIndexDf.registerTempTable("cellIndexTowerIndexView")
+//
+//    val cdrSchema = StructType(Array(
+//      StructField("C0", StringType, nullable = true),
+//      StructField("DEVICE_NAME", StringType, nullable = true),
+//      StructField("C2", StringType, nullable = true),
+//      StructField("C3", StringType, nullable = true),
+//      StructField("C4", StringType, nullable = true),
+//      StructField("C5", StringType, nullable = true),
+//      StructField("DURATION", StringType, nullable = true)))
+//
+//    // Read CDR data
+//    val cdrDf = sqlContext.read
+//      .format("com.databricks.spark.csv")
+//      .option("header", "false") // Use first line of all files as header
+//      .option("delimiter", "|")
+//      .schema(cdrSchema)
+//      .load("hdfs://" + host + ":" + hdfs_port + "/user/sparkdata/voice_sample_20130501_20130514_size_0.01.csv")
+//
+//    /*
+//    Extracting the WEEK and the YEAR from the CDR timestamp for aggregating the number of call records
+//    for a tower in a given week for a given year
+//     */
+//    cdrDf.withColumn("yearAndWeek", date_format(unix_timestamp(col("C5"), "yyyyMMddHHmmss").cast("timestamp"), "yyyy-MM-dd"))
+//      .withColumn("WEEK", weekofyear(col("yearAndWeek")))
+//      .withColumn("YEAR", year(col("yearAndWeek")))
+//      .drop("C5", "yearAndWeek")
+//      .registerTempTable("cdrView")
+//
+//    val reducedColumnCdrDf = sqlContext.sql(
+//      """Select C0 AS CALL_DIRECTION_KEY, C2 AS ANUMBER, C3 AS OTHER_NUMBER, C4 AS cellid, WEEK, YEAR
+//       FROM cdrView""")
+//    reducedColumnCdrDf.registerTempTable("reducedColumnCdrView")
+//
+//
+//    val towerDf = sqlContext.read
+//      .format("com.databricks.spark.csv")
+//      .option("header", "true")
+//      .option("delimiter", ",")
+//      .load("hdfs://" + host + ":" + hdfs_port + "/user/sparkdata/indexed_towers.csv")
+//
+//    towerDf.join(reducedColumnCdrDf, "cellid").registerTempTable("towerIndexCDRView")
+//    /*
+//    Query to get the aggregate of the CDR records for a tower given a WEEK and a YEAR
+//     */
+//    val dataExtractionQuery = sqlContext.sql("""select first(latitude) AS LAT,first(longitude) AS LON, cellid, count(*) AS COUNT,WEEK, YEAR from towerIndexCDRView group by YEAR,WEEK,cellid""")
+//
+//    /*
+//      Saving the DataExtractionQuery
+//     */
+//    val formatter = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss")
+//    val current = formatter.format(Calendar.getInstance().getTime)
+//    dataExtractionQuery.write.format("com.databricks.spark.csv")
+//      .option("header", "true")
+//      .save("hdfs://" + host + ":" + hdfs_port + "/user/output/"+current+"dataExtractionQuery")
+//
+
+    /*
+    Query to calculate the probability matrix
+    todo : the query seems to run ok (100% CPU) but produces no results. WHY?
+
+    val query = sqlContext.sql("""select cellid,count(*) from towerIndexCDRView group by YEAR,WEEK,cellid limit 50""")
+
+    val probMatrixSourceRDD = query.rdd
+
+    val resultantProbRDD = probMatrixSourceRDD.cartesian(probMatrixSourceRDD).collect {
+      case (t1: (String, Long), t2: (String, Long)) if t1 != t2 => (t1._1, t2._1, t1._2 * t2._2)
+    }
+
+    resultantProbRDD.saveAsTextFile("hdfs://" + host + ":" + hdfs_port + "/user/output/" + current)
+    */
+
+//    val query = sqlContext.sql("""select cellid,count(*),YEAR,WEEK from towerIndexCDRView group by YEAR,WEEK,cellid limit 50""")
+//
+//    val probMatrixSourceRDD = query.rdd
+//
+//    val resultantProbRDD = probMatrixSourceRDD.cartesian(probMatrixSourceRDD).collect {
+//      case (t1: Row, t2: Row) if t1 != t2 => (t1.getString(0), t2.getString(0), t1.getLong(1) * t2.getLong(1))
+//    }
+//
+//    resultantProbRDD.saveAsTextFile("hdfs://" + host + ":" + hdfs_port + "/user/output/" + current)
+//
+//
+//    query.join(query)
     val spark_host = "sineth-HP-ProBook-450-G1"
     val host = "localhost"
     val hdfs_port = 9000
-    val sqlContext = new SQLContext(new SparkContext(new SparkConf().setAppName("MobilityModel Application")
+    val sqlContext = new SQLContext(new SparkContext(new SparkConf().setAppName("Spark Mobility Model 12")
       .setMaster("spark://" + spark_host + ":7077")))
     val log = LogManager.getRootLogger
-    log.setLevel(Level.INFO)
-    // Read MOH to cellId mapping. Headers[cellid, TowerIndex]
-    val cellIndexTowerIndexSchema = StructType(Array(
-      StructField("lat", StringType, nullable = true),
-      StructField("lon", StringType, nullable = true)))
+//    Logger.getLogger("org").setLevel(Level.OFF)
+//    Logger.getLogger("akka").setLevel(Level.OFF)
+//    log.setLevel(Level.INFO)
 
-    /*
-    load the celltowerindex
-     */
-    val cellIndexTowerIndexDf = sqlContext.read
-      .format("com.databricks.spark.csv")
-      .option("header", "true") // Use first line of all files as header
-      .schema(cellIndexTowerIndexSchema)
-      .load("hdfs://" + host + ":" + hdfs_port + "/user/sparkdata/tower_locations_minified.csv").cache()
-    cellIndexTowerIndexDf.registerTempTable("cellIndexTowerIndexView")
+    val outputDir = "uom_17_job_3"
+    val spark = SparkSession.builder()
+      .appName("Spark UOM Mobility Model")
+      .master("spark://" + spark_host + ":7077")
+      .getOrCreate()
 
     val cdrSchema = StructType(Array(
-     StructField("C0", StringType, nullable = true),
-     StructField("DEVICE_NAME", StringType, nullable = true),
-     StructField("C2", StringType, nullable = true),
-     StructField("C3", StringType, nullable = true),
-     StructField("C4", StringType, nullable = true),
-     StructField("C5", StringType, nullable = true),
-     StructField("DURATION", StringType, nullable = true)))
+      StructField("C0", StringType, nullable = true),
+      StructField("DEVICE_NAME", StringType, nullable = true),
+      StructField("C2", StringType, nullable = true),
+      StructField("C3", StringType, nullable = true),
+      StructField("C4", StringType, nullable = true),
+      StructField("C5", StringType, nullable = true),
+      StructField("DURATION", StringType, nullable = true)))
 
-   // Read CDR data
-    val cdrDf = sqlContext.read
-     .format("com.databricks.spark.csv")
-     .option("header", "false") // Use first line of all files as header
-     .option("delimiter", "|")
-     .schema(cdrSchema)
-     .load("hdfs://" + host + ":" + hdfs_port + "/user/sparkdata/voice_sample_20130501_20130514_size_0.01.csv")
-    cdrDf.registerTempTable("cdrView")
+    // Read CDR data
+    val cdrDf = spark.read
+      .option("header", "false") // Use first line of all files as header
+      .option("delimiter", "|")
+      .schema(cdrSchema)
+      .csv("hdfs://" + host + ":" + hdfs_port + "/user/sparkdata/voice_sample_20130501_20130514_size_0.01.csv")
 
-    /* Select only necessary columns from CDR. Headers[CALL_DIRECTION_KEY, ANUMBER, OTHER_NUMBER, cellid, CALL_DATE,
-    //      * CALL_Time]
-    //      * CALL_DATE, CALL_Time is taken from CALL_TIME colum(YYYY-MM-DD:HH:MM:SS) in CDR*/
-     val reducedColumnCdrDf = sqlContext.sql("""Select C0 AS CALL_DIRECTION_KEY, C2 AS ANUMBER,
-       C3 AS OTHER_NUMBER, C4 AS CELL_ID, SUBSTRING(C5,5,4) AS CALL_DATE, SUBSTRING(C5,9,4) AS CALL_TIME
+    /*
+    Extracting the WEEK and the YEAR from the CDR timestamp for aggregating the number of call records
+    for a tower in a given week for a given year
+     */
+    cdrDf.withColumn("yearAndWeek", date_format(unix_timestamp(col("C5"), "yyyyMMddHHmmss").cast("timestamp"), "yyyy-MM-dd"))
+      .withColumn("WEEK", weekofyear(col("yearAndWeek")))
+      .withColumn("YEAR", year(col("yearAndWeek")))
+      .drop("C5", "yearAndWeek")
+      .createOrReplaceTempView("cdrView")
+
+    val reducedColumnCdrDf = spark.sql(
+      """Select C0 AS CALL_DIRECTION_KEY, C2 AS ANUMBER, C3 AS OTHER_NUMBER, C4 AS cellid, WEEK, YEAR
        FROM cdrView""")
-     reducedColumnCdrDf.registerTempTable("reducedColumnCdrView")
+    reducedColumnCdrDf.createOrReplaceTempView("reducedColumnCdrView")
 
+    val towerDf = spark.read
+      .option("header", "true")
+      .option("delimiter", ",")
+      .csv("hdfs://" + host + ":" + hdfs_port + "/user/sparkdata/indexed_towers.csv")
 
-    //    log.warn(sqlContext.sql("""select count(*) from cdrView"""))
+    towerDf.join(reducedColumnCdrDf, "cellid").createOrReplaceTempView("towerIndexCDRView")
+    /*
+        Query to calculate the probability matrix
+    */
+    val callCountPerCellDf = spark.sql("""select YEAR,WEEK,cellid as CELL_ID,count(*) as CALL_COUNT from towerIndexCDRView group by YEAR,WEEK,cellid limit 100""")
+    val otherCallCountDf = callCountPerCellDf.toDF("OTHER_YEAR", "OTHER_WEEK", "OTHER_CELL_ID", "OTHER_CALL_COUNT")
+    val resultantDf = callCountPerCellDf.join(otherCallCountDf, col("YEAR") === col("OTHER_YEAR") && col("WEEK") === col("OTHER_WEEK")
+      && col("CELL_ID") =!= col("OTHER_CELL_ID"))
+    val probMatrixDf = resultantDf.withColumn("MOV_VAL", col("CALL_COUNT") * col("OTHER_CALL_COUNT"))
+      .select("YEAR", "WEEK", "CELL_ID", "OTHER_CELL_ID", "MOV_VAL")
 
-    // Read date to week number mapping. Headers[CALL_DATE, WeekNumber]
-    // val dateWeekMapSchema = StructType(Array(
-    //   StructField("CALL_DATE", StringType, nullable = true),
-    //   StructField("WeekNumber", StringType, nullable = true)))
-
-    // val dateWeekMapDf = sqlContext.read
-    //   .format("com.databricks.spark.csv")
-    //   .option("header", "true") // Use first line of all files as header
-    //   .schema(dateWeekMapSchema)
-    //   .load("hdfs://" + host + ":" + hdfs_port + "/data/resources/day_weekNum_map.csv").cache()
-    // dateWeekMapDf.registerTempTable("dateWeekMapView")
-
-    // //--- Process CDR start---//
-
-    // val cdrSchema = StructType(Array(
-    //   StructField("C0", StringType, nullable = true),
-    //   StructField("DEVICE_NAME", StringType, nullable = true),
-    //   StructField("C2", StringType, nullable = true),
-    //   StructField("C3", StringType, nullable = true),
-    //   StructField("C4", StringType, nullable = true),
-    //   StructField("C5", StringType, nullable = true),
-    //   StructField("DURATION", StringType, nullable = true)))
-
-    // // Read CDR data
-    // val cdrDf = sqlContext.read
-    //   .format("com.databricks.spark.csv")
-    //   .option("header", "false") // Use first line of all files as header
-    //   .option("delimiter", "|")
-    //   .schema(cdrSchema)
-    //   .load("hdfs://" + host + ":" + hdfs_port + "/data/voice/VOICE20130110*")
-    // cdrDf.registerTempTable("cdrView")
-
-    // /* Select only necessary colums from CDR. Headers[CALL_DIRECTION_KEY, ANUMBER, OTHER_NUMBER, cellid, CALL_DATE,
-    //      * CALL_Time]
-    //      * CALL_DATE, CALL_Time is taken from CALL_TIME colum(YYYY-MM-DD:HH:MM:SS) in CDR*/
-    // val reducedColumCdrDf = sqlContext.sql("""Select C0 CALL_DIRECTION_KEY, C2 ANUMBER,
-    //   C3 OTHER_NUMBER, C4 cellid, SUBSTRING(C5,5,4) CALL_DATE, SUBSTRING(C5,9,4) CALL_Time
-    //   FROM cdrView""")
-    // reducedColumCdrDf.registerTempTable("reducedColumCdrView")
-
-    // // Select ANUMBER as the subscriberId relevant to cellid when CALL_DIRECTION_KEY=2
-    // val outCdrDf = sqlContext.sql("""SELECT cellid, CALL_DATE, CALL_Time, ANUMBER subId
-    //                                 FROM reducedColumCdrView where CALL_DIRECTION_KEY=2""")
-    // outCdrDf.registerTempTable("outCdrDfView")
-
-    // // Select OTHER_NUMBER as the subscriberId relevant to cellid when CALL_DIRECTION_KEY=1
-    // val inCdrDf = sqlContext.sql("""SELECT cellid, CALL_DATE, CALL_Time, OTHER_NUMBER subId
-    //                               FROM reducedColumCdrView where CALL_DIRECTION_KEY=1""")
-    // inCdrDf.registerTempTable("inCdrDfView")
-
-    // // Vertically join above two table to get complete CDR data set.Headers[cellid, CALL_DATE, CALL_Time, subId]
-    // val cdrCompackedDf = sqlContext.sql("SELECT * FROM outCdrDfView UNION ALL SELECT * FROM inCdrDfView")
-    // cdrCompackedDf.registerTempTable("cdrCompackedView")
-    // //--- Process CDR end---//
-
-    // //--- Combine MOH and week number with CDR data start---//
-    // /* Join Compacked CDR table and cellIndexMOH to get MOH name for each CDR record.
-    //     	 Headers[cellid, CALL_DATE, CALL_Time, subId, TowerIndex]*/
-    // val cdrWithTowerIndexDf = sqlContext.sql("""SELECT cdrCompackedView.cellid cellid, subId, TowerIndex, CALL_Time,CALL_DATE
-    //   FROM cdrCompackedView LEFT JOIN cellIndexTowerIndexView
-    //   ON cdrCompackedView.cellid = cellIndexTowerIndexView.cellid""")
-    // cdrWithTowerIndexDf.registerTempTable("cdrWithTowerIndexView")
-
-    // // Only select CDR with at night(2130-0530) to find home MOH. Headers[subId, TowerIndex]
-    // val cdrAtNightDf = sqlContext.sql("""SELECT cellid, subId, TowerIndex FROM cdrWithTowerIndexView
-    //                                         WHERE CALL_Time>2130 OR CALL_Time<0530""")
-    // cdrAtNightDf.registerTempTable("cdrAtNightDf")
-
-    // /*CDR with week number. join cdrWithTowerIndexView and dateWeekMapView table to add week number to each record.
-    //       Headers[subId, TowerIndex, WeekNumber]*/
-    // val cdrWithWeekDf = sqlContext.sql("""SELECT subId, TowerIndex, WeekNumber, cdrWithTowerIndexView.CALL_DATE
-    //     									FROM cdrWithTowerIndexView left join dateWeekMapView
-    //     										on cdrWithTowerIndexView.CALL_DATE=dateWeekMapView.CALL_DATE""")
-    // cdrWithWeekDf.registerTempTable("cdrWithWeekView")
-    // //--- Combine MOH and week number with CDR data end---//
-
-    // //--- Calculate home MOH of each subscriber start---//
-    // /*TowerIndex is MOH name, callCountInMOH is the count of calls made by the subscriber in each MOH at night(1900-0600)
-    //        Group all the records by subscriberId subId first and then by TowerIndex.Then get a count.
-    //        Headers[subscriberId, TowerIndex, callCountInMOH]*/
-    // val callsInMOHDf = sqlContext.sql("""SELECT subId subscriberId, TowerIndex, count(subId) as callCountInMOH
-    //   FROM cdrAtNightDf GROUP BY subId,TowerIndex""")
-    // callsInMOHDf.registerTempTable("callsInMOHView")
-
-    // /* Find most frequent MOH of each subscriber by number of calls made at night.
-    //  * There can be more than one Most Frequent MOH when two MOHs have equal number of callCountInMOH.
-    //  * So the first most frequent MOH has been taken as the home MOH since subscriber should only have one home MOH.
-    //  */
-    // /* Self joined callsInMOHView to get the MOH of the subscriber with the maximum number of call count.
-    //       Headers[subscriberId, TowerIndex, callCountInMOH]*/
-    // val SubscriberFrqntMOHDf = sqlContext.sql("""SELECT a.subscriberId, a.TowerIndex, a.callCountInMOH FROM callsInMOHView a
-    //     INNER JOIN (SELECT subscriberId, MAX(callCountInMOH) callCountInMOH FROM callsInMOHView GROUP BY subscriberId) b
-    //     ON a.subscriberId = b.subscriberId AND a.callCountInMOH = b.callCountInMOH""")
-    // SubscriberFrqntMOHDf.registerTempTable("SubscriberFrqntMOHView")
-
-    // /* Self joined SubscriberFrqntMOHView to get the first MOH when there multiple frequent MOHs for a subscriber.
-    //       Headers[subscriberId, homeMOH] */
-    // val SubscriberHomeMOHDF = sqlContext.sql("""SELECT a.subscriberId, b.homeMOH FROM SubscriberFrqntMOHView a
-    //                            INNER JOIN (SELECT subscriberId, FIRST(TowerIndex) as homeMOH, FIRST(callCountInMOH)
-    //                            as callCountInMOH FROM SubscriberFrqntMOHView GROUP BY subscriberId) AS b
-    //                            ON a.subscriberId = b.subscriberId AND a.TowerIndex = b.homeMOH""")
-    // SubscriberHomeMOHDF.registerTempTable("SubscriberHomeMOHView")
-    // //--- Calculate home MOH of each subscriber end---//
-
-    // //--- Calculate Mobility start---//
-    // /* The mobility value for a MOH is calculated by aggregating number of calls made in that particular MOH
-    //     * by subscribers whose Home MOH is not the same.The average fraction of time that users living in
-    //     * MOH i spend in MOH j during a week is calculated.
-    //     * Assumption: The number of phone calls made by a user while in MOH j
-    //     * is proportional to the time spent there
-    //     */
-
-    // /* Modified CDR record by adding home MOH for each record. join cdrWithWeekView with SubscriberHomeMOHView
-    //     * on subscriberId to add home MOH to each record.
-    //     * Headers[subId, TowerIndex, homeMOH, WeekNumber]*/
-    // val modifiedCdrDf = sqlContext.sql("""SELECT subId, TowerIndex, homeMOH, WeekNumber FROM cdrWithWeekView
-    //                                    inner join SubscriberHomeMOHView
-    //                                    on cdrWithWeekView.subId = SubscriberHomeMOHView.subscriberId""")
-    // modifiedCdrDf.registerTempTable("modifiedCdrView")
-
-    // /* callsAwayFromHome is the number of calls made by the subscriber in other MOH areas(not Home)
-    //     * Group all the records by TowerIndex first and then by Home MOH of the subscriber homeMOH, and then by the week.
-    //     * Then get a count.
-    //     * Headers[subId, TowerIndex, homeMOH, WeekNumber, callsAwayFromHome]*/
-    // val awayCallCountDF = sqlContext.sql("""SELECT TowerIndex, homeMOH, WeekNumber, count(TowerIndex) callsAwayFromHome
-    //                                        FROM modifiedCdrView group by TowerIndex, homeMOH, WeekNumber""")
-    // awayCallCountDF.registerTempTable("awayCallCountView")
-
-    // // Remove calls within the home MOH when calculating mobility
-    // val mobilityDf = sqlContext.sql("SELECT * FROM awayCallCountView WHERE TowerIndex<>homeMOH")
-    // mobilityDf.registerTempTable("mobilityView")
-
-    /* Group all the records by TowerIndex first and then by WeekNumber.Then get a sum.
-          Headers[TowerIndex, WeekNumber, FractionOfCalls]*/
-    // sqlContext.sql("""SELECT TowerIndex, WeekNumber, sum(callsAwayFromHome) FractionOfCalls FROM mobilityView group by TowerIndex,
-    //      WeekNumber order by WeekNumber, TowerIndex""")
-    //   .write.format("com.databricks.spark.csv") 
-    //   .save("hdfs://" + host + ":" + hdfs_port + "/user/hadoop/lf_job5")
-    //--- Calculate Mobility end---//
-//    log.warn("NUMBER OF CASES "+sqlContext.sql("""select count(*) from cdrview"""))
-    val formatter = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss")
-    val current = formatter.format(Calendar.getInstance().getTime)
-    sqlContext.sql("""select CELL_ID,count(*) from reducedColumnCdrView group by CELL_ID""")
-    .write.format("com.databricks.spark.csv")
-    .save("hdfs://" + host + ":" + hdfs_port + "/user/output/"+current)
-
-    log.info("####################Ending the calculations#########################")
-    log.info("####################Ending the calculations#########################")
-    log.info("####################Ending the calculations#########################")
-    log.info("Fields available are "+reducedColumnCdrDf.schema.toString())
+    probMatrixDf.write.csv("hdfs://" + host + ":" + hdfs_port + "/user/output/" + outputDir)
   }
+
 }
